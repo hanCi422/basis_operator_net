@@ -1,3 +1,5 @@
+# modify from https://github.com/PredictiveIntelligenceLab/Physics-informed-DeepONets
+
 import jax
 import jax.numpy as np
 from jax import random, vmap
