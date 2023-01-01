@@ -6,18 +6,15 @@ class Config(object):
     ntrain = 1000
     nvalid = 1000
     ntest = 1000
-    nbasis = None
-    length_scale = None
     nbasis_in = 9
     nbasis_out = 9
     batch_size = 100
     sub = 1
-    basis_name = 'grf'
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     epochs = 20000
     base_in_hidden = [512, 512, 512, 512, 512]
     base_out_hidden = [512, 512, 512, 512, 512]
-    middle_hidden = [128, 128, 128]
+    middle_hidden = [512, 512, 512]
     model_name = 'BasisONet'
     activation = None
     lambda_in = 1.0
@@ -95,7 +92,7 @@ class Logger():
     def __init__(self, subpath):
         if not os.path.exists('logs'):
             os.mkdir('logs')
-        self.logger = open(os.path.join('logs', subpath + '_' + '.txt'), 'w')
+        self.logger = open(os.path.join('logs', subpath + '.txt'), 'w')
     def log_string(self, out_str):
         self.logger.write(out_str+'\n')
         self.logger.flush()

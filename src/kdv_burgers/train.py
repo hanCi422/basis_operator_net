@@ -18,6 +18,7 @@ def main(**kwargs):
     lambda_in, lambda_out = opt.lambda_in, opt.lambda_out
     nbasis_in = opt.nbasis_in
     nbasis_out = opt.nbasis_out
+
     batch_size = opt.batch_size
     learning_rate = opt.learning_rate
     epochs = opt.epochs
@@ -27,27 +28,29 @@ def main(**kwargs):
     base_out_hidden = opt.base_out_hidden
     middle_hidden = opt.middle_hidden
     model_name = opt.model_name.lower()
+
     if not os.path.exists('checkpoints'):
-        os.makedirs('checkpoints') 
+        os.makedirs('checkpoints')    
+
     model_path = os.path.join('checkpoints', model_name + '.pth')
     logger = Logger(subpath=model_name)
 
     x = np.load(os.path.join('datasets', 'in_f.npy'))
     y = np.load(os.path.join('datasets', 'out_f.npy'))
-    grid = np.load(os.path.join('datasets', 'grid.npy'))
-    grid_in = grid.copy()
-    grid_out = grid.copy()
+    grid_in = np.load(os.path.join('datasets', 'grid_in.npy'))
+    grid_out = np.load(os.path.join('datasets', 'grid_out.npy'))
     print('x_shape | y_shape | grid_in_shape | grid_out_shape: ', \
         x.shape, y.shape, grid_in.shape, grid_out.shape)
     
-    x_train = x[:ntrain, ...]
-    x_valid = x[ntrain:ntrain+nvalid, ...]
-    x_test = x[ntrain+nvalid:ntrain+nvalid+ntest, ...]
-    y_train = y[:ntrain, ...]
-    y_valid = y[ntrain:ntrain+nvalid, ...]
-    y_test = y[ntrain+nvalid:ntrain+nvalid+ntest, ...]
-    J1_in = x_train.shape[1]
-    J1_out = y_train.shape[1]
+    x_train = x[:ntrain, ::opt.sub]
+    x_valid = x[ntrain:ntrain+nvalid, ::opt.sub]
+    x_test = x[ntrain+nvalid:ntrain+nvalid+ntest, ::opt.sub]
+    y_train = y[:ntrain, ::opt.sub, ::opt.sub]
+    y_valid = y[ntrain:ntrain+nvalid, ::opt.sub, ::opt.sub]
+    y_test = y[ntrain+nvalid:ntrain+nvalid+ntest, ::opt.sub, ::opt.sub]
+    grid_in = grid_in[::opt.sub]
+    grid_out = grid_out[::opt.sub, ::opt.sub, :]
+    J1_out, J2_out = y_train.shape[1], y_train.shape[2]
     print('x_train_shape | y_train_shape | grid_in_shape | grid_out_shape: ', \
         x_train.shape, y_train.shape, grid_in.shape, grid_out.shape)
     x_train = torch.from_numpy(x_train).float()
@@ -83,9 +86,9 @@ def main(**kwargs):
             x = x.to(device)
             y = y.to(device)
             out, aec_in, aec_out = model(x, y)
-            loss_l2_operator = l2_rel_loss(out, y.reshape(-1, J1_out))
-            loss_l2_autoencoder_in = l2_rel_loss(aec_in, x.reshape(-1, J1_in))
-            loss_l2_autoencoder_out = l2_rel_loss(aec_out, y.reshape(-1, J1_out))
+            loss_l2_operator = l2_rel_loss(out, y.reshape(-1, J1_out*J2_out))
+            loss_l2_autoencoder_in = l2_rel_loss(aec_in, x)
+            loss_l2_autoencoder_out = l2_rel_loss(aec_out, y.reshape(-1, J1_out*J2_out))
             loss_total = loss_l2_operator + lambda_in * loss_l2_autoencoder_in + lambda_out * loss_l2_autoencoder_out
             optimizer.zero_grad()
             loss_total.backward()
@@ -106,9 +109,9 @@ def main(**kwargs):
                 x = x.to(device)
                 y = y.to(device)
                 out, aec_in, aec_out = model(x, y)
-                loss_l2_operator = l2_rel_loss(out, y.reshape(-1, J1_out))
-                loss_l2_autoencoder_in = l2_rel_loss(aec_in, x.reshape(-1, J1_in))
-                loss_l2_autoencoder_out = l2_rel_loss(aec_out, y.reshape(-1, J1_out))
+                loss_l2_operator = l2_rel_loss(out, y.reshape(-1, J1_out*J2_out))
+                loss_l2_autoencoder_in = l2_rel_loss(aec_in, x)
+                loss_l2_autoencoder_out = l2_rel_loss(aec_out, y.reshape(-1, J1_out*J2_out))
                 loss_total = loss_l2_operator + lambda_in * loss_l2_autoencoder_in + lambda_out * loss_l2_autoencoder_out
 
                 valid_loss_total += loss_total.item()
@@ -147,10 +150,10 @@ def main(**kwargs):
             y = y.to(device)
             out, aec_in, aec_out = model(x, y)
             test_record.append(out)
-            loss_mse_operator = mse_loss(out, y.reshape(-1, J1_out)) * x.shape[0]
-            loss_l2_operator = l2_rel_loss(out, y.reshape(-1, J1_out))
-            loss_l2_autoencoder_in = l2_rel_loss(aec_in, x.reshape(-1, J1_in))
-            loss_l2_autoencoder_out = l2_rel_loss(aec_out, y.reshape(-1, J1_out))
+            loss_mse_operator = mse_loss(out, y.reshape(-1, J1_out*J2_out)) * x.shape[0]
+            loss_l2_operator = l2_rel_loss(out, y.reshape(-1, J1_out*J2_out))
+            loss_l2_autoencoder_in = l2_rel_loss(aec_in, x)
+            loss_l2_autoencoder_out = l2_rel_loss(aec_out, y.reshape(-1, J1_out*J2_out))
 
             test_l2_loss_operator += loss_l2_operator.item()
             test_mse_loss_operator += loss_mse_operator.item()
@@ -170,8 +173,8 @@ if __name__ == "__main__":
     base_in_hidden = [512, 512, 512, 512, 512]
     base_out_hidden = [512, 512, 512, 512, 512]
     middle_hidden = [512, 512, 512]
-    nbasis_in = 50
-    nbasis_out = 30
+    nbasis_in = 10
+    nbasis_out = 50
     main(model_name='BasisONet', sub = 1, \
             ntrain=1000, nvalid=500, ntest=500, \
             base_in_hidden=base_in_hidden, base_out_hidden=base_out_hidden, middle_hidden=middle_hidden, \
