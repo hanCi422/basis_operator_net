@@ -32,9 +32,9 @@ def main(**kwargs):
     model_path = os.path.join('checkpoints', model_name + '.pth')
     logger = Logger(subpath=model_name)
 
-    x = np.load(os.path.join('datasets', 'in_f_exp.npy'))
-    y = np.load(os.path.join('datasets', 'out_f_exp.npy'))
-    grid = np.load(os.path.join('datasets', 'grid_exp.npy'))
+    x = np.load(os.path.join('datasets', 'in_f_binary.npy'))
+    y = np.load(os.path.join('datasets', 'out_f_binary.npy'))
+    grid = np.load(os.path.join('datasets', 'grid_binary.npy'))
     grid_in = grid.copy()
     grid_out = grid.copy()
     print('x_shape | y_shape | grid_in_shape | grid_out_shape: ', \
