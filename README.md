@@ -2,7 +2,7 @@
 
 **Basis Operator Network: A Neural Network-based Model for Learning Nonlinear Operators via Neural Basis**
 
-Ning Hua
+Ning Hua, Wenlian Lu
 
 ## Introduction
 
